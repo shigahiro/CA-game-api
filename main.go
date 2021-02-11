@@ -4,22 +4,34 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/http"
 
 	_ "github.com/go-sql-driver/mysql"
 )
 
-func main() {
+type helloHandler struct{}
+
+func (*helloHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	db, err := sql.Open("mysql", "root:password@tcp(godockerDB)/sample")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-	id := 1
-	var name string
-
-	if err := db.QueryRow("SELECT name FROM users").Scan(&name); err != nil {
-		log.Fatal(err)
+	switch {
+	case r.URL.Path == "/user/create" && r.Method == "POST":
+		fmt.Println("create")
+	case r.URL.Path == "/user/get" && r.Method == "GET":
+		fmt.Println("update")
+	case r.URL.Path == "/user/update" && r.Method == "POST":
+		fmt.Println("update")
 	}
+}
 
-	fmt.Println(id, name)
+func main() {
+
+	handler := &helloHandler{}
+	http.Handle("/user/", handler)
+
+	http.ListenAndServe(":8080", nil)
+
 }

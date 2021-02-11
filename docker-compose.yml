@@ -15,6 +15,8 @@ services:
   db:
     image: 'mysql:8'
     container_name: godockerDB
+    volumes:
+      - ./db/mysql_data:/var/lib/mysql
     ports:
     - '3306:3306'
     environment: 
