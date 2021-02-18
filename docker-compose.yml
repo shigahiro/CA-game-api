@@ -15,11 +15,13 @@ services:
   db:
     image: 'mysql:8'
     container_name: godockerDB
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
     volumes:
       - ./db/mysql_data:/var/lib/mysql
     ports:
     - '3306:3306'
-    environment: 
+    environment:
+      MYSQL_HOST_AUTH_METHOD: 'trust'
       MYSQL_ROOT_PASSWORD: password
     networks: 
       - network
