@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -17,6 +18,10 @@ type UserHandler struct{}
 type User struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
+}
+
+type Token struct {
+	Token string `json:"token"`
 }
 
 func db_open() (db *sql.DB) {
@@ -93,9 +98,6 @@ func user_data_insert(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-
-	json.NewEncoder(w).Encode(user)
 	token := RandomString()
 
 	stmt, err := db.Prepare("INSERT users SET name=?")
@@ -105,33 +107,45 @@ func user_data_insert(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	id, err := res.LastInsertId()
 	checkErr(err)
 
-	fmt.Println(id)
-	fmt.Println(user)
-
-	stmt, err = db.Prepare("INSERT authentication SET token=?, user_id=?")
+	stmt, err = db.Prepare("INSERT authentication SET token=?, user_id=?, issued_at=?")
 	checkErr(err)
-	res, err = stmt.Exec(token, id)
-	checkErr(err)
-	id, err = res.LastInsertId()
+	t := time.Now()
+	const layout = "2006-01-02 15:04:05"
+	t.Format(layout)
+	res, err = stmt.Exec(token, id, t)
 	checkErr(err)
 
-	fmt.Println(id)
-	fmt.Println(token)
-}
-
-func user_data_get(db *sql.DB, w http.ResponseWriter, req *http.Request) {
-
-	var user User
-
-	err := db.QueryRow("SELECT id, name FROM users WHERE id = ?", 5).Scan(&user.ID, &user.Name)
+	var jsontoken Token
+	err = db.QueryRow("SELECT token FROM authentication WHERE user_id = ?", id).Scan(&jsontoken.Token)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 
-	json.NewEncoder(w).Encode(user)
-	// token := req.Header["x-token"]
+	json.NewEncoder(w).Encode(jsontoken)
+}
+
+func user_data_get(db *sql.DB, w http.ResponseWriter, req *http.Request) {
+
+	type Username struct {
+		Name string `json:"name"`
+	}
+	var username Username
+	var id int
+	reqtoken := req.Header.Get("x-token")
+
+	err := db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&id)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = db.QueryRow("SELECT name FROM users WHERE id = ?", id).Scan(&username.Name)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(username)
 }
 
 func user_data_update(db *sql.DB, w http.ResponseWriter, req *http.Request) {
