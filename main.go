@@ -117,9 +117,7 @@ func user_data_insert(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 
 	var jsontoken Token
 	err = db.QueryRow("SELECT token FROM authentication WHERE user_id = ?", id).Scan(&jsontoken.Token)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 
 	w.WriteHeader(http.StatusOK)
 
@@ -136,13 +134,9 @@ func user_data_get(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	reqtoken := req.Header.Get("x-token")
 
 	err := db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&id)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 	err = db.QueryRow("SELECT name FROM users WHERE id = ?", id).Scan(&username.Name)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(username)
@@ -165,15 +159,28 @@ func user_data_update(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	reqtoken := req.Header.Get("x-token")
 
-	json.NewEncoder(w).Encode(user)
-	fmt.Println(user)
-	stmt, err := db.Prepare("update users SET name=?  where id=?")
+	err = db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&user.ID)
 	checkErr(err)
-	res, err := stmt.Exec(user.Name, 1)
+
+	stmt, err := db.Prepare("update users SET name=? where id=?")
+	checkErr(err)
+	res, err := stmt.Exec(user.Name, user.ID)
 	checkErr(err)
 	affect, err := res.RowsAffected()
 	checkErr(err)
 	fmt.Println(affect)
+
+	stmt, err = db.Prepare("UPDATE authentication SET issued_at=? where user_id=?")
+	checkErr(err)
+	t := time.Now()
+	const layout = "2006-01-02 15:04:05"
+	t.Format(layout)
+	res, err = stmt.Exec(t, user.ID)
+	checkErr(err)
+
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(user)
 }
