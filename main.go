@@ -1,12 +1,13 @@
 package main
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"time"
 
@@ -23,6 +24,11 @@ type User struct {
 type Token struct {
 	Token string `json:"token"`
 }
+
+// type Character {
+// 	UsercharacterID string
+
+// }
 
 func db_open() (db *sql.DB) {
 	db, err := sql.Open("mysql", "root:password@tcp(godockerDB)/sample")
@@ -49,19 +55,27 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(response)
 }
 
-func RandomString() string {
-	var letter = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+func RandomString() (string, error) {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-	b := make([]rune, 20)
-	for i := range b {
-		b[i] = letter[rand.Intn(len(letter))]
+	// 乱数を生成
+	b := make([]byte, 20)
+	if _, err := rand.Read(b); err != nil {
+		return "", errors.New("unexpected error...")
 	}
-	return string(b)
+
+	// letters からランダムに取り出して文字列を生成
+	var result string
+	for _, v := range b {
+		// index が letters の長さに収まるように調整
+		result += string(letters[int(v)%len(letters)])
+	}
+	return result, nil
 }
 
 func main() {
 	handler := &UserHandler{}
-	http.Handle("/user/", handler)
+	http.Handle("/", handler)
 	http.ListenAndServe(":8080", nil)
 
 }
@@ -76,8 +90,12 @@ func (*UserHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		user_data_insert(db, w, req)
 	case req.URL.Path == "/user/get" && req.Method == "GET":
 		user_data_get(db, w, req)
-	case req.URL.Path == "/user/update" && req.Method == "POST":
+	case req.URL.Path == "/user/update" && req.Method == "PUT":
 		user_data_update(db, w, req)
+	case req.URL.Path == "/gacha/draw" && req.Method == "POST":
+		fmt.Println("gachadraw")
+	case req.URL.Path == "/character/list" && req.Method == "GET":
+		fmt.Println("characterlist")
 	}
 }
 
@@ -98,7 +116,7 @@ func user_data_insert(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	token := RandomString()
+	token, _ := RandomString()
 
 	stmt, err := db.Prepare("INSERT users SET name=?")
 	checkErr(err)
@@ -184,3 +202,7 @@ func user_data_update(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 
 	json.NewEncoder(w).Encode(user)
 }
+
+// func gachadraw {
+// 	math.rand
+// }
