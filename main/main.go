@@ -35,6 +35,16 @@ type Results struct {
 	Results []Character `json:"results"`
 }
 
+type Possession_character struct {
+	UserID      string `json:"userCharacterID"`
+	CharacterID string `json:"characterID"`
+	Name        string `json:"name"`
+}
+
+type Possession_characters struct {
+	Characters []Possession_character `json:"characters"`
+}
+
 type GachaTime struct {
 	Time int `json:"time"`
 }
@@ -104,7 +114,7 @@ func (*UserHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case req.URL.Path == "/gacha/draw" && req.Method == "POST":
 		gachadraw(db, w, req)
 	case req.URL.Path == "/character/list" && req.Method == "GET":
-		fmt.Println("characterlist")
+		character_list_get(db, w, req)
 	}
 }
 
@@ -212,6 +222,35 @@ func user_data_get(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(username)
 }
 
+func character_list_get(db *sql.DB, w http.ResponseWriter, req *http.Request) {
+	var id int
+	reqtoken := req.Header.Get("x-token")
+
+	err := db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&id)
+	checkErr(err)
+
+	rows, err := db.Query("SELECT user_id, character_id, character_name FROM possession_characters WHERE user_id = ?", id)
+	checkErr(err)
+
+	defer rows.Close()
+
+	var possession_character Possession_character
+	var possession_characters Possession_characters
+	for rows.Next() {
+		if err := rows.Scan(&possession_character.UserID, &possession_character.CharacterID, &possession_character.Name); err != nil {
+			log.Fatal(err)
+		}
+		possession_characters.Characters = append(possession_characters.Characters, possession_character)
+
+	}
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(possession_characters)
+}
+
 func gachadraw(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	var results Results
 	var gacha_times GachaTime
@@ -277,7 +316,6 @@ func gatya_data_insert(db *sql.DB, w http.ResponseWriter, req *http.Request, s s
 		characteridlist = append(characteridlist, characterid)
 
 	}
-
 	if err := rows.Err(); err != nil {
 		log.Fatal(err)
 	}
