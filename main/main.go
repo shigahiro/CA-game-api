@@ -1,13 +1,14 @@
 package main
 
 import (
-	"crypto/rand"
+	crypto "crypto/rand"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 type UserHandler struct{}
 
 type User struct {
-	ID   int    `json:"id"`
+	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
@@ -25,10 +26,18 @@ type Token struct {
 	Token string `json:"token"`
 }
 
-// type Character {
-// 	UsercharacterID string
+type Character struct {
+	ID   string `json:"characterID"`
+	Name string `json:"name"`
+}
 
-// }
+type Results struct {
+	Results []Character `json:"results"`
+}
+
+type GachaTime struct {
+	Time int `json:"time"`
+}
 
 func db_open() (db *sql.DB) {
 	db, err := sql.Open("mysql", "root:password@tcp(godockerDB)/sample")
@@ -60,7 +69,7 @@ func RandomString() (string, error) {
 
 	// 乱数を生成
 	b := make([]byte, 20)
-	if _, err := rand.Read(b); err != nil {
+	if _, err := crypto.Read(b); err != nil {
 		return "", errors.New("unexpected error...")
 	}
 
@@ -93,7 +102,7 @@ func (*UserHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case req.URL.Path == "/user/update" && req.Method == "PUT":
 		user_data_update(db, w, req)
 	case req.URL.Path == "/gacha/draw" && req.Method == "POST":
-		fmt.Println("gachadraw")
+		gachadraw(db, w, req)
 	case req.URL.Path == "/character/list" && req.Method == "GET":
 		fmt.Println("characterlist")
 	}
@@ -142,24 +151,6 @@ func user_data_insert(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(jsontoken)
 }
 
-func user_data_get(db *sql.DB, w http.ResponseWriter, req *http.Request) {
-
-	type Username struct {
-		Name string `json:"name"`
-	}
-	var username Username
-	var id int
-	reqtoken := req.Header.Get("x-token")
-
-	err := db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&id)
-	checkErr(err)
-	err = db.QueryRow("SELECT name FROM users WHERE id = ?", id).Scan(&username.Name)
-	checkErr(err)
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(username)
-}
-
 func user_data_update(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 
 	var user User
@@ -203,6 +194,112 @@ func user_data_update(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
-// func gachadraw {
-// 	math.rand
-// }
+func user_data_get(db *sql.DB, w http.ResponseWriter, req *http.Request) {
+
+	type Username struct {
+		Name string `json:"name"`
+	}
+	var username Username
+	var id int
+	reqtoken := req.Header.Get("x-token")
+
+	err := db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&id)
+	checkErr(err)
+	err = db.QueryRow("SELECT name FROM users WHERE id = ?", id).Scan(&username.Name)
+	checkErr(err)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(username)
+}
+
+func gachadraw(db *sql.DB, w http.ResponseWriter, req *http.Request) {
+	var results Results
+	var gacha_times GachaTime
+
+	body, err := ioutil.ReadAll(req.Body)
+	defer req.Body.Close()
+	if err != nil {
+		RespondWithError(w, http.StatusBadRequest, "Invalid request")
+		return
+	}
+
+	// 読み込んだJSONを構造体に変換
+	if err := json.Unmarshal(body, &gacha_times); err != nil {
+		RespondWithError(w, http.StatusBadRequest, "JSON Unmarshaling failed .")
+		return
+	}
+
+	// time := gacha_times.Time
+	for i := gacha_times.Time; i >= 1; i-- {
+		randam := rand.Intn(100)
+		switch {
+		case 0 <= randam && randam < 4:
+			s := "S"
+			result := gatya_data_insert(db, w, req, s)
+			results.Results = append(results.Results, result)
+		case 4 <= randam && randam < 20:
+			s := "A"
+			result := gatya_data_insert(db, w, req, s)
+			results.Results = append(results.Results, result)
+		default:
+			s := "B"
+			result := gatya_data_insert(db, w, req, s)
+			results.Results = append(results.Results, result)
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(results)
+}
+
+func gatya_data_insert(db *sql.DB, w http.ResponseWriter, req *http.Request, s string) Character {
+	var user User
+	var result Character
+
+	reqtoken := req.Header.Get("x-token")
+
+	fmt.Println(reqtoken)
+	err := db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&user.ID)
+	checkErr(err)
+
+	// クエリ実行
+	rows, err := db.Query("SELECT character_id FROM character_rank WHERE character_rank = ?", s)
+	checkErr(err)
+
+	defer rows.Close()
+
+	var characterid int
+	var characteridlist []int
+	for rows.Next() {
+		if err := rows.Scan(&characterid); err != nil {
+			log.Fatal(err)
+		}
+		characteridlist = append(characteridlist, characterid)
+
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	characterid = rand.Intn(4)
+
+	err = db.QueryRow("SELECT character_id, character_name FROM `character` WHERE character_id = ?", characteridlist[characterid]).Scan(&result.ID, &result.Name)
+	checkErr(err)
+
+	stmt, err := db.Prepare("INSERT INTO possession_characters(user_id, character_id, character_name, issued_at) VALUES(?,?,?,?)")
+	checkErr(err)
+	t := time.Now()
+	const layout = "2006-01-02 15:04:05"
+	t.Format(layout)
+	res, err := stmt.Exec(user.ID, result.ID, result.Name, t)
+	checkErr(err)
+	id, err := res.LastInsertId()
+	checkErr(err)
+
+	fmt.Println(characteridlist[characterid])
+	fmt.Println(id)
+
+	return result
+
+}
