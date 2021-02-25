@@ -1,8 +1,7 @@
-package application
+package main
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -30,8 +29,8 @@ func (*UserHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case req.URL.Path == "/user/update" && req.Method == "PUT":
 		user_data_update(db, w, req)
 	case req.URL.Path == "/gacha/draw" && req.Method == "POST":
-		fmt.Println("gachadraw")
+		gachadraw(db, w, req)
 	case req.URL.Path == "/character/list" && req.Method == "GET":
-		fmt.Println("characterlist")
+		character_list_get(db, w, req)
 	}
 }
