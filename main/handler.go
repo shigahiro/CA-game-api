@@ -48,20 +48,30 @@ func RandomString() (string, error) {
 	return result, nil
 }
 
-func user_data_insert(db *sql.DB, w http.ResponseWriter, req *http.Request) {
-
-	var user User
+func unmarshalingjson(i interface{}, w http.ResponseWriter, req *http.Request) error {
 
 	body, err := ioutil.ReadAll(req.Body)
 	defer req.Body.Close()
 	if err != nil {
 		RespondWithError(w, http.StatusBadRequest, "Invalid request")
-		return
+		return err
 	}
 
 	// 読み込んだJSONを構造体に変換
-	if err := json.Unmarshal(body, &user); err != nil {
+	if err := json.Unmarshal(body, i); err != nil {
 		RespondWithError(w, http.StatusBadRequest, "JSON Unmarshaling failed .")
+		return err
+	}
+	return err
+}
+
+func user_data_insert(db *sql.DB, w http.ResponseWriter, req *http.Request) {
+
+	var user User
+	var i interface{}
+	i = &user
+
+	if err := unmarshalingjson(i, w, req); err != nil {
 		return
 	}
 
@@ -94,23 +104,15 @@ func user_data_insert(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 func user_data_update(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 
 	var user User
-
-	body, err := ioutil.ReadAll(req.Body)
-	defer req.Body.Close()
-	if err != nil {
-		RespondWithError(w, http.StatusBadRequest, "Invalid request")
-		return
-	}
-
-	// 読み込んだJSONを構造体に変換
-	if err := json.Unmarshal(body, &user); err != nil {
-		RespondWithError(w, http.StatusBadRequest, "JSON Unmarshaling failed .")
+	var i interface{}
+	i = &user
+	if err := unmarshalingjson(i, w, req); err != nil {
 		return
 	}
 
 	reqtoken := req.Header.Get("x-token")
 
-	err = db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&user.ID)
+	err := db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&user.ID)
 	checkErr(err)
 
 	stmt, err := db.Prepare("update users SET name=? where id=?")
@@ -185,16 +187,9 @@ func gachadraw(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	var results Results
 	var gacha_times GachaTime
 
-	body, err := ioutil.ReadAll(req.Body)
-	defer req.Body.Close()
-	if err != nil {
-		RespondWithError(w, http.StatusBadRequest, "Invalid request")
-		return
-	}
-
-	// 読み込んだJSONを構造体に変換
-	if err := json.Unmarshal(body, &gacha_times); err != nil {
-		RespondWithError(w, http.StatusBadRequest, "JSON Unmarshaling failed .")
+	var i interface{}
+	i = &gacha_times
+	if err := unmarshalingjson(i, w, req); err != nil {
 		return
 	}
 

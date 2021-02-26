@@ -32,5 +32,7 @@ func (*UserHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		gachadraw(db, w, req)
 	case req.URL.Path == "/character/list" && req.Method == "GET":
 		character_list_get(db, w, req)
+	default:
+
 	}
 }

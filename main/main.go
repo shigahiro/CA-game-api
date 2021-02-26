@@ -10,5 +10,4 @@ func main() {
 	handler := &UserHandler{}
 	http.Handle("/", handler)
 	http.ListenAndServe(":8080", nil)
-
 }
