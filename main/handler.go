@@ -194,7 +194,7 @@ func gachadraw(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	}
 
 	// time := gacha_times.Time
-	for i := gacha_times.Time; i >= 1; i-- {
+	for count := gacha_times.Time; count >= 1; count-- {
 		randam := rand.Intn(100)
 		switch {
 		case 0 <= randam && randam < 4:
