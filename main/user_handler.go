@@ -65,7 +65,7 @@ func unmarshalingjson(i interface{}, w http.ResponseWriter, req *http.Request) e
 	return err
 }
 
-func user_data_insert(db *sql.DB, w http.ResponseWriter, req *http.Request) {
+func user_data_create(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 
 	var user User
 	var i interface{}

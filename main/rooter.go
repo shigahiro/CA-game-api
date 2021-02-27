@@ -26,7 +26,7 @@ func (*UserHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	switch {
 	case req.URL.Path == "/user/create" && req.Method == "POST":
 		info.Println("ユーザー情報作成ルーティング成功")
-		user_data_insert(db, w, req)
+		user_data_create(db, w, req)
 	case req.URL.Path == "/user/get" && req.Method == "GET":
 		info.Println("ユーザー情報取得ルーティング成功")
 		user_data_get(db, w, req)
