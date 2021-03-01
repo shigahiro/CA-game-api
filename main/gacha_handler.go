@@ -8,7 +8,9 @@ import (
 	"time"
 )
 
-func gachadraw(db *sql.DB, w http.ResponseWriter, req *http.Request) {
+func gachadraw(w http.ResponseWriter, req *http.Request) {
+	info.Println("ガチャ実行ルーティング成功")
+
 	var results Results
 	var gacha_times GachaTime
 	var judge Character
@@ -19,6 +21,8 @@ func gachadraw(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	db := db_open()
+	defer db.Close()
 	for count := gacha_times.Time; count >= 1; count-- {
 		randam := rand.Intn(100)
 		switch {
@@ -105,7 +109,9 @@ func gacha_data_insert(db *sql.DB, w http.ResponseWriter, req *http.Request, s s
 
 }
 
-func character_list_get(db *sql.DB, w http.ResponseWriter, req *http.Request) {
+func character_list(w http.ResponseWriter, req *http.Request) {
+	info.Println("ユーザ所持キャラ一覧取得ルーティング成功")
+
 	var id int
 	reqtoken := req.Header.Get("x-token")
 	if reqtoken == "" {
@@ -113,6 +119,8 @@ func character_list_get(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	db := db_open()
+	defer db.Close()
 	err := db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&id)
 	checkErr(err, "トークンがありません")
 	info.Println("トークンが一致しました")

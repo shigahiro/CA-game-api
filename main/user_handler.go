@@ -2,7 +2,6 @@ package main
 
 import (
 	cryptorand "crypto/rand"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -65,7 +64,8 @@ func unmarshalingjson(i interface{}, w http.ResponseWriter, req *http.Request) e
 	return err
 }
 
-func user_data_create(db *sql.DB, w http.ResponseWriter, req *http.Request) {
+func user_data_create(w http.ResponseWriter, req *http.Request) {
+	info.Println("ユーザー情報作成ルーティング成功")
 
 	var user User
 	var i interface{}
@@ -79,6 +79,8 @@ func user_data_create(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	checkErr(err, "トークン生成失敗")
 	info.Println("トークン生成成功")
 
+	db := db_open()
+	defer db.Close()
 	stmt, err := db.Prepare("INSERT users SET name=?")
 	checkErr(err, "Stmtオブジェクト生成失敗")
 	info.Println("Stmtオブジェクト生成成功")
@@ -107,7 +109,8 @@ func user_data_create(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(jsontoken)
 }
 
-func user_data_update(db *sql.DB, w http.ResponseWriter, req *http.Request) {
+func user_data_update(w http.ResponseWriter, req *http.Request) {
+	info.Println("ユーザー情報更新ルーティング成功")
 
 	var user User
 	var i interface{}
@@ -123,6 +126,8 @@ func user_data_update(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	}
 	info.Println("トークン取得成功")
 
+	db := db_open()
+	defer db.Close()
 	err := db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&user.ID)
 	checkErr(err, "トークンがありません")
 	info.Println("トークンが一致しました")
@@ -149,7 +154,8 @@ func user_data_update(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
-func user_data_get(db *sql.DB, w http.ResponseWriter, req *http.Request) {
+func user_data_get(w http.ResponseWriter, req *http.Request) {
+	info.Println("ユーザー情報取得ルーティング成功")
 
 	type Username struct {
 		Name string `json:"name"`
@@ -164,6 +170,8 @@ func user_data_get(db *sql.DB, w http.ResponseWriter, req *http.Request) {
 	}
 	info.Println("トークン取得成功")
 
+	db := db_open()
+	defer db.Close()
 	err := db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&id)
 	checkErr(err, "トークンがありません")
 	info.Println("トークンが一致しました")

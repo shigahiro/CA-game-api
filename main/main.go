@@ -14,7 +14,12 @@ var (
 )
 
 func main() {
-	handler := &UserHandler{}
-	http.Handle("/", handler)
+
+	http.HandleFunc("/user/create", user_data_create)
+	http.HandleFunc("/user/get", user_data_get)
+	http.HandleFunc("/user/update", user_data_update)
+	http.HandleFunc("/gacha/draw", gachadraw)
+	http.HandleFunc("/character/list", character_list)
+
 	http.ListenAndServe(":8080", nil)
 }
