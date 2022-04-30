@@ -1,6 +1,16 @@
 package main
 
+import (
+	"log"
+	"os"
+)
+
 type UserHandler struct{}
+
+var (
+	warn = log.New(os.Stderr, "[WARN] ", log.Ldate|log.Ltime|log.Lshortfile)
+	info = log.New(os.Stdout, "[INFO] ", log.Ldate|log.Ltime|log.Lshortfile)
+)
 
 type User struct {
 	ID   string `json:"id"`
