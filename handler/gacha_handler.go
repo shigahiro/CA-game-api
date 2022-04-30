@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"database/sql"
@@ -17,8 +17,7 @@ func Gachadraw(w http.ResponseWriter, req *http.Request) {
 	var gacha_times model.GachaTime
 	var judge model.Character
 
-	var i interface{}
-	i = &gacha_times
+	var i interface{} = &gacha_times
 	if err := unmarshalingjson(i, w, req); err != nil {
 		return
 	}

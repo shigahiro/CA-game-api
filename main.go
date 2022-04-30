@@ -13,8 +13,8 @@ func main() {
 	http.HandleFunc("/user/create", handler.User_data_create)
 	http.HandleFunc("/user/get", handler.User_data_get)
 	http.HandleFunc("/user/update", handler.User_data_update)
-	http.HandleFunc("/gacha/draw", handler.gachadraw)
-	http.HandleFunc("/character/list", handler.character_list)
+	http.HandleFunc("/gacha/draw", handler.Gachadraw)
+	http.HandleFunc("/character/list", handler.Character_list)
 
 	http.ListenAndServe(":8080", nil)
 }

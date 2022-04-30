@@ -1,4 +1,4 @@
-package main
+package model
 
 import (
 	"log"
@@ -8,8 +8,8 @@ import (
 type UserHandler struct{}
 
 var (
-	warn = log.New(os.Stderr, "[WARN] ", log.Ldate|log.Ltime|log.Lshortfile)
-	info = log.New(os.Stdout, "[INFO] ", log.Ldate|log.Ltime|log.Lshortfile)
+	Warn = log.New(os.Stderr, "[WARN] ", log.Ldate|log.Ltime|log.Lshortfile)
+	Info = log.New(os.Stdout, "[INFO] ", log.Ldate|log.Ltime|log.Lshortfile)
 )
 
 type User struct {

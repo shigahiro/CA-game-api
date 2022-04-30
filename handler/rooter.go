@@ -1,12 +1,11 @@
-package main
+package handler
 
 import (
 	"database/sql"
 	"log"
 
-	"github.com/shigahiro/CA-game-api/model"
-
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/shigahiro/CA-game-api/model"
 )
 
 func db_open() (db *sql.DB) {

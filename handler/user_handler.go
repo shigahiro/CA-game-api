@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	cryptorand "crypto/rand"
@@ -35,7 +35,7 @@ func RandomString() (string, error) {
 	// 乱数を生成
 	b := make([]byte, 20)
 	if _, err := cryptorand.Read(b); err != nil {
-		return "", errors.New("unexpected error...")
+		return "", errors.New("unexpected error")
 	}
 
 	// letters からランダムに取り出して文字列を生成
@@ -70,8 +70,7 @@ func User_data_create(w http.ResponseWriter, req *http.Request) {
 	model.Info.Println("ユーザー情報作成ルーティング成功")
 
 	var user model.User
-	var i interface{}
-	i = &user
+	var i interface{} = &user
 
 	if err := unmarshalingjson(i, w, req); err != nil {
 		return
@@ -99,7 +98,7 @@ func User_data_create(w http.ResponseWriter, req *http.Request) {
 	t := time.Now()
 	const layout = "2006-01-02 15:04:05"
 	t.Format(layout)
-	res, err = stmt.Exec(token, id, t)
+	_, err = stmt.Exec(token, id, t)
 	checkErr(err, "認証情報の挿入失敗")
 	model.Info.Println("認証情報の挿入成功")
 
@@ -115,8 +114,7 @@ func User_data_update(w http.ResponseWriter, req *http.Request) {
 	model.Info.Println("ユーザー情報更新ルーティング成功")
 
 	var user model.User
-	var i interface{}
-	i = &user
+	var i interface{} = &user
 	if err := unmarshalingjson(i, w, req); err != nil {
 		return
 	}
