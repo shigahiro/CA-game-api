@@ -41,5 +41,5 @@ type Possession_characters struct {
 }
 
 type GachaTime struct {
-	Time int `json:"time"`
+	Time int `json:"times"`
 }

@@ -4,19 +4,13 @@ import (
 	cryptorand "crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/shigahiro/CA-game-api/model"
 )
-
-func checkErr(err error, errstring string) {
-	if err != nil {
-		model.Warn.Println(errstring)
-		panic(err)
-	}
-}
 
 func RespondWithError(w http.ResponseWriter, code int, msg string) {
 	RespondWithJSON(w, code, map[string]string{"error": msg})
@@ -29,7 +23,7 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(response)
 }
 
-func RandomString() (string, error) {
+func randomString() (string, error) {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 	// 乱数を生成
@@ -76,30 +70,32 @@ func User_data_create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	token, err := RandomString()
-	checkErr(err, "トークン生成失敗")
+	fmt.Println(i)
+	token, err := randomString()
+	if err != nil {
+		model.Warn.Println("トークン生成失敗")
+		return
+	}
 	model.Info.Println("トークン生成成功")
 
 	db := db_open()
 	defer db.Close()
-	stmt, err := db.Prepare("INSERT users SET name=?")
-	checkErr(err, "Stmtオブジェクト生成失敗")
-	model.Info.Println("Stmtオブジェクト生成成功")
-	res, err := stmt.Exec(user.Name)
-	checkErr(err, "ユーザ情報の挿入失敗")
-	model.Info.Println("ユーザ情報の挿入成功")
-	id, err := res.LastInsertId()
-	checkErr(err, "user_id取得失敗")
-	checkErr(err, "user_id取得成功")
 
-	stmt, err = db.Prepare("INSERT authentication SET token=?, user_id=?, issued_at=?")
-	checkErr(err, "Stmtオブジェクト生成失敗")
-	model.Info.Println("Stmtオブジェクト生成成功")
 	t := time.Now()
 	const layout = "2006-01-02 15:04:05"
 	t.Format(layout)
-	_, err = stmt.Exec(token, id, t)
-	checkErr(err, "認証情報の挿入失敗")
+
+	stmt, err := db.Prepare("INSERT users SET name=?, token=?, issued_at=?")
+	if err != nil {
+		model.Warn.Println("Stmtオブジェクト生成失敗")
+		return
+	}
+	model.Info.Println("Stmtオブジェクト生成成功")
+	_, err = stmt.Exec(user.Name, token, t)
+	if err != nil {
+		model.Warn.Println("認証情報の挿入失敗")
+		return
+	}
 	model.Info.Println("認証情報の挿入成功")
 
 	var jsontoken model.Token
@@ -128,25 +124,29 @@ func User_data_update(w http.ResponseWriter, req *http.Request) {
 
 	db := db_open()
 	defer db.Close()
-	err := db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&user.ID)
-	checkErr(err, "トークンがありません")
+	err := db.QueryRow("SELECT id FROM users WHERE token = ?", reqtoken).Scan(&user.ID)
+	if err != nil {
+		model.Warn.Println("トークンがありません")
+		return
+	}
 	model.Info.Println("トークンが一致しました")
 
-	stmt, err := db.Prepare("update users SET name=? where id=?")
-	checkErr(err, "Stmtオブジェクト生成失敗")
+	stmt, err := db.Prepare("update users SET name=?, issued_at=? where id=?")
+	if err != nil {
+		model.Warn.Println("Stmtオブジェクト生成失敗")
+		return
+	}
 	model.Info.Println("Stmtオブジェクト生成成功")
-	_, err = stmt.Exec(user.Name, user.ID)
-	checkErr(err, "ユーザテーブルの更新失敗")
-	model.Info.Println("ユーザテーブルの更新成功")
 
-	stmt, err = db.Prepare("UPDATE authentication SET issued_at=? where user_id=?")
-	checkErr(err, "Stmtオブジェクト生成失敗")
-	model.Info.Println("Stmtオブジェクト生成成功")
 	t := time.Now()
 	const layout = "2006-01-02 15:04:05"
 	t.Format(layout)
-	_, err = stmt.Exec(t, user.ID)
-	checkErr(err, "ユーザテーブルの更新失敗")
+
+	_, err = stmt.Exec(user.Name, t, user.ID)
+	if err != nil {
+		model.Warn.Println("ユーザテーブルの更新失敗")
+		return
+	}
 	model.Info.Println("ユーザテーブルの更新成功")
 
 	w.WriteHeader(http.StatusOK)
@@ -172,12 +172,18 @@ func User_data_get(w http.ResponseWriter, req *http.Request) {
 
 	db := db_open()
 	defer db.Close()
-	err := db.QueryRow("SELECT user_id FROM authentication WHERE token = ?", reqtoken).Scan(&id)
-	checkErr(err, "トークンがありません")
+	err := db.QueryRow("SELECT id FROM users WHERE token = ?", reqtoken).Scan(&id)
+	if err != nil {
+		model.Warn.Println("トークンがありません")
+		return
+	}
 	model.Info.Println("トークンが一致しました")
 
 	err = db.QueryRow("SELECT name FROM users WHERE id = ?", id).Scan(&username.Name)
-	checkErr(err, "ユーザ情報を取得に失敗しました")
+	if err != nil {
+		model.Warn.Println("ユーザ情報の取得に失敗しました")
+		return
+	}
 	model.Info.Println("ユーザ情報を取得しました")
 
 	w.WriteHeader(http.StatusOK)
